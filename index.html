@@ -180,7 +180,7 @@
                 <div class="bg-blue-50 p-4 rounded-lg flex flex-col gap-2">
                     <h2 class="text-xl font-bold text-blue-800">Resultados del Cálculo</h2>
                     <p class="text-blue-700 font-medium">
-                        Área de la sección ($$A_g$$): <span id="area-ag" class="font-bold"></span>
+                        Área de la sección (A_g): <span id="area-ag" class="font-bold"></span>
                     </p>
                     <p class="text-blue-700 font-medium">
                         Cuantía Mínima (1%): <span id="as-min" class="font-bold"></span>
@@ -429,7 +429,7 @@
             document.getElementById('as-max').textContent = `${As_max.toFixed(2)} cm²`;
             
             // Mensaje de validación de la cuantía
-            selectedRebarAreaInfo.textContent = `Área de acero seleccionada ($$A_s$$): ${As_total.toFixed(2)} cm²`;
+            selectedRebarAreaInfo.textContent = `Área de acero seleccionada (A_s): ${As_total.toFixed(2)} cm²`;
             
             // Limpiar clases de color previas
             rebarMessageContainer.classList.remove('bg-green-50', 'bg-red-100');
