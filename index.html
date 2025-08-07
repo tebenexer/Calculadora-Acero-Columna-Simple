@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Acero ACI 318</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .container {
+            max-width: 90%;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+        .card {
+            background-color: #ffffff;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1-px rgba(0, 0, 0, 0.06);
+            padding: 2rem;
+        }
+        .input-group label {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            display: block;
+            color: #1f2937;
+        }
+        .input-group input, .input-group select {
+            width: 100%;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            border: 1px solid #d1d5db;
+            transition: all 0.2s ease-in-out;
+            background-color: #f9fafb;
+        }
+        .input-group input:focus, .input-group select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+        }
+        .btn-primary {
+            background-color: #3b82f6;
+            color: #ffffff;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: background-color 0.2s ease-in-out;
+            cursor: pointer;
+        }
+        .btn-primary:hover {
+            background-color: #2563eb;
+        }
+        #results {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        #additional-results {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        #canvas-container {
+            position: relative;
+            background-color: #f9fafb;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            border: 1px solid #e5e7eb;
+            aspect-ratio: 1 / 1;
+        }
+        canvas {
+            display: block;
+            max-width: 100%;
+            max-height: 100%;
+        }
+        #error-message {
+            color: #ef4444;
+            display: none;
+        }
+        .radio-group {
+            display: flex;
+            gap: 1rem;
+            padding: 0.75rem 0;
+        }
+        .radio-group label {
+            display: flex;
+            align-items: center;
+            font-weight: 400;
+        }
+        .radio-group input[type="radio"] {
+            margin-right: 0.5rem;
+            width: auto;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen">
+
+    <div class="container grid lg:grid-cols-2 gap-8 my-8">
+
+        <!-- Panel de control de cálculo -->
+        <div class="card flex flex-col gap-6">
+            <h1 class="text-3xl font-bold text-gray-800">Cálculo de Acero en Columnas</h1>
+            <p class="text-gray-600">
+                Introduce las dimensiones de la columna en metros para calcular los requisitos de refuerzo según ACI 318.
+            </p>
+
+            <!-- Formulario de entrada de datos -->
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="input-group">
+                    <label for="base">Base (m)</label>
+                    <input type="number" id="base" value="0.30" step="0.01" min="0.1" class="w-full">
+                </div>
+                <div class="input-group">
+                    <label for="altura">Altura (m)</label>
+                    <input type="number" id="altura" value="0.30" step="0.01" min="0.1" class="w-full">
+                </div>
+            </div>
+            
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="input-group">
+                    <label for="longitudinal-rebar-select">Varilla Longitudinal</label>
+                    <select id="longitudinal-rebar-select" class="w-full"></select>
+                </div>
+                <div class="input-group">
+                    <label for="num-rebars">Cantidad de Varillas</label>
+                    <input type="number" id="num-rebars" value="4" step="2" min="4" class="w-full">
+                </div>
+            </div>
+
+            <!-- Casillas de entrada para la organización de las varillas -->
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="input-group">
+                    <label for="num-rows">Capas en Filas</label>
+                    <input type="number" id="num-rows" value="2" step="1" min="2" class="w-full">
+                </div>
+                <div class="input-group">
+                    <label for="num-cols">Capas en Columnas</label>
+                    <input type="number" id="num-cols" value="2" step="1" min="2" class="w-full">
+                </div>
+            </div>
+            
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="input-group">
+                    <label>Unidad</label>
+                    <div class="radio-group">
+                        <label for="unit-mm">
+                            <input type="radio" id="unit-mm" name="rebar-units" value="mm">
+                            mm
+                        </label>
+                        <label for="unit-inch">
+                            <input type="radio" id="unit-inch" name="rebar-units" value="inch" checked>
+                            Pulgadas
+                        </label>
+                    </div>
+                </div>
+                <!-- Selector de Zoom -->
+                <div class="input-group">
+                    <label for="zoom-select">Zoom del Dibujo (%)</label>
+                    <select id="zoom-select" class="w-full">
+                        <!-- Opciones de zoom generadas dinámicamente -->
+                    </select>
+                </div>
+            </div>
+
+            <!-- Botón de cálculo -->
+            <button id="calculate-btn" class="btn-primary">Calcular</button>
+            <p id="error-message" class="text-sm font-medium"></p>
+
+            <!-- Resultados -->
+            <div id="results" class="flex flex-col gap-4 hidden">
+                <div class="bg-blue-50 p-4 rounded-lg flex flex-col gap-2">
+                    <h2 class="text-xl font-bold text-blue-800">Resultados del Cálculo</h2>
+                    <p class="text-blue-700 font-medium">
+                        Área de la sección ($$A_g$$): <span id="area-ag" class="font-bold"></span>
+                    </p>
+                    <p class="text-blue-700 font-medium">
+                        Cuantía Mínima (1%): <span id="as-min" class="font-bold"></span>
+                    </p>
+                    <p class="text-blue-700 font-medium">
+                        Cuantía Máxima (8%): <span id="as-max" class="font-bold"></span>
+                    </p>
+                    <p class="text-blue-700">
+                        <strong class="text-blue-800">Recomendación:</strong> Se sugiere no exceder una cuantía de acero del 4-5% para evitar la congestión de barras y facilitar la colocación del hormigón.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contenedor para el dibujo y los resultados adicionales -->
+        <div class="flex flex-col gap-8">
+            <!-- Área de visualización y gráfico -->
+            <div id="canvas-container" class="card">
+                <canvas id="column-canvas" class="w-full h-full"></canvas>
+            </div>
+
+            <!-- Nueva sección de resultados debajo del canvas -->
+            <div id="additional-results" class="card flex flex-col gap-4 hidden">
+                <!-- Mensaje de verificación de la cuantía -->
+                <div id="rebar-message-container" class="p-4 rounded-lg">
+                    <p id="rebar-message" class="text-lg font-bold"></p>
+                    <p id="selected-rebar-area-info" class="text-sm"></p>
+                </div>
+
+                <!-- Detalles de estribos -->
+                <div class="bg-orange-50 p-4 rounded-lg">
+                    <h3 class="text-xl font-bold text-orange-800 mb-2">Detalles del Refuerzo Transversal (Estribos)</h3>
+                    <p class="text-orange-700 font-medium">
+                        Separación máxima de estribos: <span id="stirrup-spacing" class="font-bold"></span>
+                    </p>
+                    <p class="text-orange-700 text-sm">
+                        Calculado como el menor valor entre:
+                        <ul class="list-disc list-inside mt-1">
+                            <li>16 veces el diámetro de la barra longitudinal.</li>
+                            <li>48 veces el diámetro de la barra del estribo.</li>
+                            <li>La dimensión menor de la columna.</li>
+                        </ul>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script type="text/javascript">
+        // Diccionario de diámetros de varillas comerciales en el sistema imperial (pulgadas)
+        const rebarDiametersImperial = {
+            'N°3 (3/8")': { mm: 9.5, inch: 0.375 },
+            'N°4 (1/2")': { mm: 12.7, inch: 0.5 },
+            'N°5 (5/8")': { mm: 15.9, inch: 0.625 },
+            'N°6 (3/4")': { mm: 19.1, inch: 0.75 },
+            'N°7 (7/8")': { mm: 22.2, inch: 0.875 },
+            'N°8 (1")': { mm: 25.4, inch: 1.0 }
+        };
+
+        // Diccionario de diámetros de varillas comerciales en el sistema métrico (mm)
+        const rebarDiametersMetric = {
+            '4 mm': { mm: 4 },
+            '5 mm': { mm: 5 },
+            '5.5 mm': { mm: 5.5 },
+            '7 mm': { mm: 7 },
+            '8.5 mm': { mm: 8.5 },
+            '9 mm': { mm: 9 },
+            '10 mm': { mm: 10 },
+            '11 mm': { mm: 11 },
+            '12 mm': { mm: 12 },
+            '16 mm': { mm: 16 },
+            '18 mm': { mm: 18 },
+        };
+        
+        // Obtener elementos del DOM
+        const calculateBtn = document.getElementById('calculate-btn');
+        const baseInput = document.getElementById('base');
+        const alturaInput = document.getElementById('altura');
+        const longitudinalRebarSelect = document.getElementById('longitudinal-rebar-select');
+        const numRebarsInput = document.getElementById('num-rebars');
+        const numRowsInput = document.getElementById('num-rows');
+        const numColsInput = document.getElementById('num-cols');
+        const rebarUnitsRadios = document.getElementsByName('rebar-units');
+        const zoomSelect = document.getElementById('zoom-select');
+        const rebarMessage = document.getElementById('rebar-message');
+        const selectedRebarAreaInfo = document.getElementById('selected-rebar-area-info');
+        const rebarMessageContainer = document.getElementById('rebar-message-container');
+        const resultsDiv = document.getElementById('results');
+        const additionalResultsDiv = document.getElementById('additional-results');
+        const errorMessage = document.getElementById('error-message');
+        const canvas = document.getElementById('column-canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // El array de niveles de zoom ya no es necesario, se maneja dinámicamente
+        // const zoomLevels = [100, 80, 60, 40, 20];
+
+        /**
+         * Rellena el dropdown de varillas con las opciones disponibles, según la unidad seleccionada.
+         * @param {string} unit - La unidad seleccionada ('mm' o 'inch').
+         */
+        function populateRebarDropdowns(unit) {
+            longitudinalRebarSelect.innerHTML = '';
+            let diameters;
+            if (unit === 'mm') {
+                diameters = rebarDiametersMetric;
+            } else {
+                diameters = rebarDiametersImperial;
+            }
+
+            for (const [name, values] of Object.entries(diameters)) {
+                const option = document.createElement('option');
+                option.value = name;
+                if (unit === 'mm') {
+                    option.textContent = name;
+                } else {
+                    option.textContent = `${values.inch.toFixed(3)} in - ${name}`;
+                }
+                longitudinalRebarSelect.appendChild(option);
+            }
+        }
+        
+        /**
+         * Obtiene la unidad de medida seleccionada por el usuario.
+         * @returns {string} La unidad seleccionada ('mm' o 'inch').
+         */
+        function getSelectedUnit() {
+            for (const radio of rebarUnitsRadios) {
+                if (radio.checked) {
+                    return radio.value;
+                }
+            }
+            return 'mm'; // Por defecto
+        }
+
+        /**
+         * Función para ajustar automáticamente el número de filas cuando cambia la cantidad de varillas.
+         */
+        function autoAdjustRowsOnRebarChange() {
+            const numRebars = parseInt(numRebarsInput.value, 10);
+            const numCols = parseInt(numColsInput.value, 10);
+            
+            if (isNaN(numRebars) || numRebars % 2 !== 0 || numRebars < 4) {
+                 // No hacer nada si el valor no es válido, la validación principal ya lo manejará.
+                return;
+            }
+
+            // La fórmula para el perímetro es: Perímetro = 2*filas + 2*(columnas - 2)
+            // Despejando filas: filas = (Perímetro - 2*(columnas - 2)) / 2
+            const newNumRows = (numRebars - (2 * (numCols - 2))) / 2;
+            
+            // Validar que el resultado sea un número entero y al menos 2
+            if (Number.isInteger(newNumRows) && newNumRows >= 2) {
+                numRowsInput.value = newNumRows;
+            }
+        }
+        
+        /**
+         * Función para ajustar automáticamente el número de varillas cuando cambia la distribución de capas.
+         */
+        function autoAdjustRebarsOnRowColChange() {
+            const numRows = parseInt(numRowsInput.value, 10);
+            const numCols = parseInt(numColsInput.value, 10);
+
+            if (!isNaN(numRows) && numRows >= 2 && !isNaN(numCols) && numCols >= 2) {
+                // La fórmula para el perímetro es 2*filas + 2*(columnas - 2)
+                const perimeterRebars = (2 * numRows) + (2 * (numCols - 2));
+                numRebarsInput.value = perimeterRebars;
+            }
+        }
+
+        /**
+         * Función principal para realizar todos los cálculos y actualizar la UI y el canvas.
+         */
+        function updateCalculationsAndDrawing() {
+            const base = parseFloat(baseInput.value);
+            const altura = parseFloat(alturaInput.value);
+            const numRebars = parseInt(numRebarsInput.value, 10);
+            const numRows = parseInt(numRowsInput.value, 10);
+            const numCols = parseInt(numColsInput.value, 10);
+            const selectedRebar = longitudinalRebarSelect.value;
+            const units = getSelectedUnit();
+            const zoomLevel = parseInt(zoomSelect.value, 10);
+
+            // Validación de la entrada
+            if (isNaN(base) || isNaN(altura) || base <= 0 || altura <= 0 || 
+                isNaN(numRebars) || numRebars < 4 || isNaN(numRows) || numRows < 2 || 
+                isNaN(numCols) || numCols < 2) {
+                errorMessage.textContent = 'Por favor, introduce valores válidos y positivos (Base, Altura) y una cantidad de varillas (mínimo 4) y una distribución de capas (mínimo 2x2).';
+                errorMessage.style.display = 'block';
+                resultsDiv.classList.add('hidden');
+                additionalResultsDiv.classList.add('hidden');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                return;
+            }
+
+            // Nueva validación para varillas impares
+            if (numRebars % 2 !== 0) {
+                errorMessage.textContent = `La cantidad de varillas (${numRebars}) no puede ser un número impar en una distribución de perímetro rectangular. Por favor, ajusta a un número par.`;
+                errorMessage.style.display = 'block';
+                resultsDiv.classList.add('hidden');
+                additionalResultsDiv.classList.add('hidden');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                return;
+            }
+            
+            // Validación para asegurar que el número de varillas coincide con el perímetro
+            const perimeterRebars = (2 * numRows) + (2 * (numCols - 2));
+            if (numRebars !== perimeterRebars) {
+                 errorMessage.textContent = `La cantidad de varillas (${numRebars}) no coincide con la distribución del perímetro de las capas (${numRows}x${numCols} = ${perimeterRebars}). Por favor, ajusta los valores para que coincidan.`;
+                errorMessage.style.display = 'block';
+                resultsDiv.classList.add('hidden');
+                additionalResultsDiv.classList.add('hidden');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                return;
+            }
+
+            errorMessage.style.display = 'none';
+            resultsDiv.classList.remove('hidden');
+            additionalResultsDiv.classList.remove('hidden');
+
+            // Cálculo del área y cuantías
+            const Ag = base * altura; // Área bruta en m^2
+            const Ag_cm2 = Ag * 10000; // Área en cm^2 para una mejor visualización de resultados
+            const As_min = 0.01 * Ag_cm2; // Acero mínimo en cm^2
+            const As_max = 0.08 * Ag_cm2; // Acero máximo en cm^2
+            const recomendacion_max = 0.05 * Ag_cm2; // Recomendación de 5%
+
+            // Obtener el diámetro de la varilla seleccionada
+            let selectedDiameter_mm;
+            if (units === 'mm') {
+                selectedDiameter_mm = rebarDiametersMetric[selectedRebar].mm;
+            } else {
+                selectedDiameter_mm = rebarDiametersImperial[selectedRebar].mm;
+            }
+            
+            // Calcular el área de una sola barra en cm²
+            const rebarArea_cm2 = Math.PI * Math.pow(selectedDiameter_mm / 20, 2);
+            
+            // Calcular el área total de acero en cm²
+            const As_total = numRebars * rebarArea_cm2;
+
+            // Actualizar la interfaz con los resultados
+            document.getElementById('area-ag').textContent = `${Ag.toFixed(2)} m² (${Ag_cm2.toFixed(2)} cm²)`;
+            document.getElementById('as-min').textContent = `${As_min.toFixed(2)} cm²`;
+            document.getElementById('as-max').textContent = `${As_max.toFixed(2)} cm²`;
+            
+            // Mensaje de validación de la cuantía
+            selectedRebarAreaInfo.textContent = `Área de acero seleccionada ($$A_s$$): ${As_total.toFixed(2)} cm²`;
+            
+            // Limpiar clases de color previas
+            rebarMessageContainer.classList.remove('bg-green-50', 'bg-red-100');
+            rebarMessage.classList.remove('text-green-800', 'text-red-700');
+
+            if (As_total >= As_min && As_total <= As_max) {
+                rebarMessage.textContent = '¡Correcto! El área de acero seleccionada está dentro del rango permitido.';
+                rebarMessageContainer.classList.add('bg-green-50');
+                rebarMessage.classList.add('text-green-800');
+                if (As_total > recomendacion_max) {
+                    rebarMessage.textContent += ' Sin embargo, el área supera el 5%, lo que puede causar congestión.';
+                }
+            } else {
+                rebarMessage.textContent = '¡Alerta! El área de acero seleccionada no cumple con el código ACI 318.';
+                rebarMessageContainer.classList.add('bg-red-100');
+                rebarMessage.classList.add('text-red-700');
+            }
+            
+            // Cálculo de la separación máxima de estribos
+            const stirrupDiameter_mm = 9.5; // Diámetro de estribo asumido (N°3 o 3/8")
+            const smallestDimension_mm = Math.min(base, altura) * 1000;
+
+            const spacing1 = 16 * selectedDiameter_mm;
+            const spacing2 = 48 * stirrupDiameter_mm;
+            const spacing3 = smallestDimension_mm;
+
+            const maxStirrupSpacing = Math.min(spacing1, spacing2, spacing3);
+            
+            // Mostrar la separación en todas las unidades requeridas
+            const maxStirrupSpacing_cm = maxStirrupSpacing / 10;
+            const maxStirrupSpacing_inch = maxStirrupSpacing / 25.4;
+            document.getElementById('stirrup-spacing').textContent = `${maxStirrupSpacing.toFixed(1)} mm / ${maxStirrupSpacing_cm.toFixed(1)} cm / ${maxStirrupSpacing_inch.toFixed(2)} pulgadas`;
+
+            // Dibujar el gráfico en el canvas
+            drawColumnSection(base, altura, numRows, numCols, zoomLevel, selectedDiameter_mm, maxStirrupSpacing_cm);
+        }
+
+        /**
+         * Función para dibujar la sección de la columna en el canvas.
+         * @param {number} base - La base de la columna en metros.
+         * @param {number} altura - La altura de la columna en metros.
+         * @param {number} numRows - La cantidad de filas de varillas.
+         * @param {number} numCols - La cantidad de columnas de varillas.
+         * @param {number} zoomLevel - El nivel de zoom en porcentaje.
+         * @param {number} selectedDiameter_mm - El diámetro de la varilla seleccionada en milímetros.
+         * @param {number} maxStirrupSpacing_cm - La separación máxima de estribos en cm.
+         */
+        function drawColumnSection(base, altura, numRows, numCols, zoomLevel, selectedDiameter_mm, maxStirrupSpacing_cm) {
+            // Ajustar el padding en función del nivel de zoom.
+            const minPadding = 20; 
+            const maxPadding = 100;
+            // La escala del padding se ajusta en base al zoom para mantener el dibujo visible.
+            const padding = maxPadding - (zoomLevel / 100) * (maxPadding - minPadding);
+
+            // Reducir la escala para que el dibujo se ajuste al canvas y el zoom
+            const scale = Math.min(
+                (canvas.width - 2 * padding) / (base * 1000),
+                (canvas.height - 2 * padding) / (altura * 1000)
+            ) * (zoomLevel / 100);
+            
+            const scaledBase = base * 1000 * scale;
+            const scaledAltura = altura * 1000 * scale;
+            
+            const offsetX = (canvas.width - scaledBase) / 2;
+            const offsetY = (canvas.height - scaledAltura) / 2;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Dibujar la sección de la columna
+            ctx.fillStyle = '#d1d5db';
+            ctx.fillRect(offsetX, offsetY, scaledBase, scaledAltura);
+            ctx.strokeStyle = '#6b7280';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(offsetX, offsetY, scaledBase, scaledAltura);
+            
+            // Dibujar estribos
+            const cover = 0.04 * 1000 * scale;
+            ctx.strokeStyle = '#4b5563';
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(offsetX + cover, offsetY + cover, scaledBase - 2 * cover, scaledAltura - 2 * cover);
+
+            // Calcular el radio de la varilla en función del diámetro real y la escala
+            const rebarRadius = Math.max(1, (selectedDiameter_mm / 2) * scale);
+            ctx.fillStyle = '#1f2937';
+
+            // Lógica para distribuir las varillas solo en el perímetro
+            const cornerRebarOffset = cover + rebarRadius;
+            const stepX = numCols > 1 ? (scaledBase - 2 * cornerRebarOffset) / (numCols - 1) : 0;
+            const stepY = numRows > 1 ? (scaledAltura - 2 * cornerRebarOffset) / (numRows - 1) : 0;
+            
+            // Dibujar varillas en las esquinas y a lo largo de los bordes
+            for (let i = 0; i < numRows; i++) {
+                for (let j = 0; j < numCols; j++) {
+                    // Solo dibujar las varillas del perímetro
+                    if (i === 0 || i === numRows - 1 || j === 0 || j === numCols - 1) {
+                        const x = offsetX + cornerRebarOffset + j * stepX;
+                        const y = offsetY + cornerRebarOffset + i * stepY;
+                        ctx.beginPath();
+                        ctx.arc(x, y, rebarRadius, 0, 2 * Math.PI);
+                        ctx.fill();
+                    }
+                }
+            }
+            
+            // Texto de dimensiones
+            ctx.fillStyle = '#1f2937';
+            ctx.font = `14px Inter`;
+            ctx.textAlign = 'center';
+            ctx.fillText(`${(base * 100).toFixed(0)} cm`, offsetX + scaledBase / 2, offsetY - 5);
+            ctx.textAlign = 'left';
+            ctx.save();
+            ctx.translate(offsetX + scaledBase + 5, offsetY + scaledAltura / 2);
+            ctx.fillText(`${(altura * 100).toFixed(0)} cm`, 0, 0);
+            ctx.restore();
+
+            // Texto de separación de estribos
+            ctx.fillStyle = '#ef4444';
+            ctx.font = `12px Inter`;
+            ctx.textAlign = 'center';
+            const stirrupDiameter_display_mm = `9.5 mm`;
+            ctx.fillText(`s_max = ${maxStirrupSpacing_cm.toFixed(1)} cm (ø estribo: ${stirrupDiameter_display_mm})`, offsetX + scaledBase / 2, offsetY + scaledAltura + 20);
+        }
+
+        /**
+         * Rellena el selector de zoom con opciones desde el 10% hasta el 200%.
+         */
+        function populateZoomDropdown() {
+            zoomSelect.innerHTML = '';
+            for (let i = 200; i >= 10; i -= 10) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = `${i}%`;
+                if (i === 80) { // Establecer 80% como valor por defecto
+                    option.selected = true;
+                }
+                zoomSelect.appendChild(option);
+            }
+        }
+
+        // --- Nueva funcionalidad de zoom con la rueda del ratón ---
+        canvas.addEventListener('wheel', (event) => {
+            // Evitar el scroll de la página
+            event.preventDefault();
+
+            let currentZoomLevel = parseInt(zoomSelect.value, 10);
+            const zoomStep = 10;
+            const minZoom = 10;
+            const maxZoom = 200;
+
+            if (event.deltaY < 0) {
+                // Rueda hacia arriba: zoom in
+                currentZoomLevel += zoomStep;
+            } else if (event.deltaY > 0) {
+                // Rueda hacia abajo: zoom out
+                currentZoomLevel -= zoomStep;
+            }
+            
+            // Asegurarse de que el zoom esté dentro del rango permitido
+            currentZoomLevel = Math.max(minZoom, Math.min(maxZoom, currentZoomLevel));
+            
+            // Actualizar el selector y el dibujo si el zoom ha cambiado
+            if (currentZoomLevel !== parseInt(zoomSelect.value, 10)) {
+                zoomSelect.value = currentZoomLevel;
+                updateCalculationsAndDrawing();
+            }
+        });
+        // --- Fin de la nueva funcionalidad de zoom con la rueda del ratón ---
+
+        // Llamar a la función de cálculo inicial y vincular eventos
+        window.onload = () => {
+            canvas.width = canvas.parentElement.clientWidth - 32;
+            canvas.height = canvas.parentElement.clientHeight - 32;
+            populateRebarDropdowns(getSelectedUnit());
+            // Establecer la varilla por defecto a N°4 (1/2") después de poblar el dropdown
+            longitudinalRebarSelect.value = 'N°4 (1/2")';
+            populateZoomDropdown();
+            updateCalculationsAndDrawing();
+        };
+        
+        // Agregar los nuevos eventos a las casillas de entrada
+        calculateBtn.addEventListener('click', updateCalculationsAndDrawing);
+        baseInput.addEventListener('input', updateCalculationsAndDrawing);
+        alturaInput.addEventListener('input', updateCalculationsAndDrawing);
+        longitudinalRebarSelect.addEventListener('change', updateCalculationsAndDrawing);
+        
+        // Nuevo listener para auto-ajustar las filas cuando cambia la cantidad de varillas
+        numRebarsInput.addEventListener('input', () => {
+            autoAdjustRowsOnRebarChange();
+            updateCalculationsAndDrawing();
+        });
+
+        // Nuevo listener para auto-ajustar las varillas cuando cambia la distribución de capas
+        numRowsInput.addEventListener('input', () => {
+            autoAdjustRebarsOnRowColChange();
+            updateCalculationsAndDrawing();
+        });
+
+        numColsInput.addEventListener('input', () => {
+            autoAdjustRebarsOnRowColChange();
+            updateCalculationsAndDrawing();
+        });
+
+        zoomSelect.addEventListener('change', updateCalculationsAndDrawing);
+        for (const radio of rebarUnitsRadios) {
+            radio.addEventListener('change', () => {
+                populateRebarDropdowns(getSelectedUnit());
+                updateCalculationsAndDrawing();
+            });
+        }
+
+        // Escuchar el evento de redimensionamiento de la ventana
+        window.addEventListener('resize', () => {
+            canvas.width = canvas.parentElement.clientWidth - 32;
+            canvas.height = canvas.parentElement.clientHeight - 32;
+            updateCalculationsAndDrawing();
+        });
+    </script>
+
+</body>
+</html>
